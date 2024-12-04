@@ -1,14 +1,17 @@
 "use client"; // Enable client-side rendering for context
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 // Create the context
 const GlobalContext = createContext();
 
 // Provider component
 export const GlobalProvider = ({ children }) => {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState();
   const [user, setUser] = useState();
+  const [token, setToken] = useState();
 
   useEffect(() => {
     if (
@@ -27,9 +30,14 @@ export const GlobalProvider = ({ children }) => {
     localStorage.clear("user");
     localStorage.setItem("isLogin", 0);
     setIsLogin("0");
+    setUser("");
+    router.push("/");
   };
-  const handleSetLogin = () => {
+
+  const handleSetLogin = (user, token) => {
     setIsLogin("1");
+    setUser(user);
+    setToken(token);
   };
 
   return (
@@ -40,6 +48,7 @@ export const GlobalProvider = ({ children }) => {
         handleClearStorage,
         handleSetLogin,
         user,
+        setUser,
       }}
     >
       {children}

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useGlobalContext } from "../context/GlobalContext";
 
 export default function AuthForm({ closeModal }) {
@@ -14,6 +14,7 @@ export default function AuthForm({ closeModal }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formMode, setFormMode] = useState("login");
   const router = useRouter();
@@ -32,6 +33,47 @@ export default function AuthForm({ closeModal }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [closeModal]);
+
+  const handleUsernameChange = (e) => {
+    const value = e.target.value;
+    const lowerCaseValue = value.toLowerCase();
+    if (/\s/.test(value)) {
+      toast({
+        title: "Username មិនត្រឹមត្រូវ",
+        description: "Username មិនអាចមានចន្លោះ",
+        variant: "destructive",
+      });
+      return;
+    }
+    setUsername(lowerCaseValue);
+  };
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    if (!value.includes("@gmail.com")) {
+      toast({
+        title: "អ៊ីមែលមិនត្រឹមត្រូវ",
+        description: "សូមបញ្ចូលអ៊ីមែលដែលបញ្ចប់ដោយ @gmail.com",
+        variant: "destructive",
+      });
+    }
+    setEmail(value);
+  };
+
+  const handleEmailBlur = () => {
+    if (email && !email.endsWith("@gmail.com")) {
+      const suggestedEmail = email.includes("@")
+        ? email.split("@")[0] + "@gmail.com"
+        : email + "@gmail.com";
+
+      setEmail(suggestedEmail);
+      toast({
+        title: "អ៊ីមែលត្រូវបានផ្ដល់អនុសាសន៍",
+        description: `យើងបានផ្ដល់អនុសាសន៍: ${suggestedEmail}`,
+        variant: "default",
+      });
+    }
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -59,17 +101,12 @@ export default function AuthForm({ closeModal }) {
             setFormMode("login");
           }
         }, 300);
-
-        // closeModal();
       } else {
         throw new Error(`Unexpected response status: ${response.status}`);
       }
     } catch (error) {
-      // handleError(error);
       setLoading(false);
-      setTimeout(() => {
-        alert("ការចុះឈ្មោះបរាជ័យ។ សូមព្យាយាមម្តងទៀត។");
-      }, 300);
+      alert("ការចុះឈ្មោះបរាជ័យ។ សូមព្យាយាមម្តងទៀត។");
     } finally {
       setLoading(false);
     }
@@ -91,56 +128,42 @@ export default function AuthForm({ closeModal }) {
           description: "អ្នកបានចូលគណនីដោយជោគជ័យ",
           variant: "default",
         });
-        if (response.data.message == "Login successful") {
-          handleSetLogin();
-          setLoading(false);
-          setTimeout(() => {
-            alert("អ្នកបានចូលគណនីដោយជោគជ័យ");
-          }, 300);
+        if (response.data.message === "Login successful") {
+          handleSetLogin(
+            response.data.user,
+            response.data.user_access_token
+              ? response.data.user_access_token
+              : response.data.admin_access_token
+          );
           localStorage.setItem("isLogin", 1);
           localStorage.setItem("user", JSON.stringify(response.data.user));
           if (response.data.user_access_token) {
-            console.log("response.data.user_access_token");
             localStorage.setItem(
               "user_access_token",
               response.data.user_access_token
             );
           } else if (response.data.admin_access_token) {
-            console.log("response.data.admin_access_token");
             localStorage.setItem(
               "admin_access_token",
               response.data.admin_access_token
             );
           }
+          // router.push("/");
+          closeModal();
+        } else {
+          throw new Error(
+            `Unexpected response message: ${response.data.message}`
+          );
         }
-        router.push("/");
-        closeModal();
       } else {
         throw new Error(`Unexpected response status: ${response.status}`);
       }
     } catch (error) {
-      // handleError(error);
       setLoading(false);
-      setTimeout(() => {
-        alert("ចូលគណនីមិនជោគជ័យ");
-      }, 300);
+      alert("ចូលគណនីមិនជោគជ័យ");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleError = (error) => {
-    console.error(
-      "Error during operation:",
-      error.response ? error.response.data : error.message
-    );
-    toast({
-      title: "មានបញ្ហា",
-      description: error.response
-        ? error.response.data.message || "សូមព្យាយាមម្តងទៀត"
-        : "សូមព្យាយាមម្តងទៀត",
-      variant: "destructive",
-    });
   };
 
   return (
@@ -153,7 +176,7 @@ export default function AuthForm({ closeModal }) {
       </h3>
       <form
         onSubmit={formMode === "register" ? handleRegister : handleLogin}
-        className="space-y-4"
+        className="space-y-4 focus:outline-none outline-none"
       >
         {formMode === "register" && (
           <div className="space-y-2">
@@ -162,35 +185,55 @@ export default function AuthForm({ closeModal }) {
               type="text"
               id="username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={handleUsernameChange}
+              placeholder="បញ្ចូល Username"
               required
               aria-label="Username"
             />
           </div>
         )}
+
         <div className="space-y-2">
           <Label htmlFor="email">អ៊ីមែល</Label>
           <Input
             type="email"
             id="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={handleEmailChange}
+            onBlur={handleEmailBlur}
+            placeholder="បញ្ចូលអ៊ីមែល (@gmail.com)"
             required
             aria-label="Email"
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 relative">
           <Label htmlFor="password">ពាក្យសម្ងាត់</Label>
           <Input
-            type="password"
+            type={passwordVisible ? "text" : "password"}
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="បញ្ចូលពាក្យសម្ងាត់"
             required
             aria-label="Password"
           />
+          <button
+            type="button"
+            onClick={() => setPasswordVisible(!passwordVisible)}
+            className="absolute inset-y-0 right-3 flex items-center text-gray-500 focus:outline-none outline-none"
+          >
+            {passwordVisible ? (
+              <EyeOff className="h-5 w-5" />
+            ) : (
+              <Eye className="h-5 w-5" />
+            )}
+          </button>
         </div>
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full focus:outline-none outline-none"
+        >
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -203,6 +246,7 @@ export default function AuthForm({ closeModal }) {
           )}
         </Button>
       </form>
+
       <p className="mt-6 text-center text-sm text-gray-500">
         {formMode === "register" ? (
           <>
@@ -210,7 +254,7 @@ export default function AuthForm({ closeModal }) {
             <Button
               variant="link"
               onClick={() => setFormMode("login")}
-              className="p-0 h-auto font-normal"
+              className="p-0 h-auto font-normal focus:outline-none outline-none select-none"
             >
               ចូល
             </Button>
@@ -221,7 +265,7 @@ export default function AuthForm({ closeModal }) {
             <Button
               variant="link"
               onClick={() => setFormMode("register")}
-              className="p-0 h-auto font-normal"
+              className="p-0 h-auto font-normal focus:outline-none outline-none"
             >
               ចុះឈ្មោះ
             </Button>

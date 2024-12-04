@@ -39,14 +39,14 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
 
   const generateColorFromName = (name) => {
     let hash = 0;
-    for (let i = 0; i < name.length; i++) {
+    for (let i = 0; i < name?.length; i++) {
       hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
     return `hsl(${hash % 360}, 50%, 70%)`;
   };
 
   const getInitials = (name) => {
-    return name.trim().slice(0, 1).toUpperCase(); // Show only the first character of the username
+    return name?.trim().slice(0, 1).toUpperCase(); // Show only the first character of the username
   };
 
   const handleAddComment = async () => {
@@ -372,10 +372,10 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
               <p
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold"
                 style={{
-                  backgroundColor: generateColorFromName(user.username),
+                  backgroundColor: generateColorFromName(user?.username),
                 }}
               >
-                {getInitials(user.username)} {/* Display only one character */}
+                {getInitials(user?.username)} {/* Display only one character */}
               </p>
             </div>
 
@@ -420,10 +420,10 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
       <ul className=" space-y-3">
         {listComments.map((comment, index) => {
           const userHasLiked = comment.like?.some(
-            (like) => like.userId === user._id
+            (like) => like.userId === user?._id
           );
           const userHasDisliked = comment.dislike?.some(
-            (dislike) => dislike.userId === user._id
+            (dislike) => dislike.userId === user?._id
           );
 
           return (
@@ -465,7 +465,7 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
                       <FaThumbsUp
                         className={`${
                           comment.like?.some(
-                            (e) => e.username === user.username
+                            (e) => e.username === user?.username
                           )
                             ? "text-blue-500"
                             : ""
@@ -480,7 +480,7 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
                         handleLikeDislikeComment(
                           comment._id,
                           comment.dislike?.some(
-                            (e) => e.username === user.username
+                            (e) => e.username === user?.username
                           )
                             ? "clearDislike"
                             : "dislike"
@@ -491,7 +491,7 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
                       <FaThumbsDown
                         className={`${
                           comment.dislike?.some(
-                            (e) => e.username === user.username
+                            (e) => e.username === user?.username
                           )
                             ? "text-red-500"
                             : ""
