@@ -62,18 +62,8 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
     setAddCommentLoading(true);
     setIsFocused(false);
 
-    const newComment = {
-      userid: user._id, // Assuming `user` contains the user's ID
-      username: user.username, // Assuming `user` contains the username
-      comment: commentText, // Use the current comment text
-      createdAt: new Date().toISOString(), // Generate current timestamp
-    };
-
-    // Update state with the new comment
-    setListComments((prev) => [newComment, ...prev]);
-
     try {
-      await axios.post(
+      const res = await axios.post(
         `https://api-school-amber.vercel.app/api/news/${newsId}/comments`,
         {
           userId: user._id,
@@ -81,8 +71,11 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
           commentText,
         }
       );
-      setAddCommentLoading(false);
-      setCommentText("");
+      if (res.status === 200) {
+        setListComments((prev) => [res.data.comment, ...prev]);
+        setAddCommentLoading(false);
+        setCommentText("");
+      }
     } catch (error) {
       console.error(error);
     }
