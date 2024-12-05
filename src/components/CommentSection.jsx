@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { FaThumbsUp, FaThumbsDown, FaReply } from "react-icons/fa";
 import { useGlobalContext } from "../context/GlobalContext";
@@ -6,6 +6,8 @@ import { IoIosArrowUp, IoIosArrowDown } from "react-icons/io";
 import { CiMenuKebab } from "react-icons/ci";
 
 const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
+  const FocusReplyMainComment = useRef([]);
+  const FocusReplyChildComment = useRef(null);
   const [listComments, setListComments] = useState(ListComments);
   const [showorHideComment, setShowOrHide] = useState([]);
   const { isLogin, user } = useGlobalContext();
@@ -14,6 +16,7 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
   const [activeReplyinReply, setActiveReplyinReply] = useState(null);
   const [loading, setLoading] = useState(false);
   const [addCommentloading, setAddCommentLoading] = useState(false);
+  const [replyMainCommentloading, setReplyMainCommentLoading] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
@@ -25,9 +28,31 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
   }, []);
 
   const handleFocus = () => setIsFocused(true);
-  const handleclearFocus = () => {
-    setIsFocused(false);
-    setCommentText("");
+
+  const handleClickReply = (rpMainOrclild, commentId, commentIndex) => {
+    if (rpMainOrclild === "main") {
+      // Toggle active reply for the main comment
+      setActiveReply((prev) => (prev === commentId ? null : commentId));
+
+      // Check if the reference exists after a slight delay
+      setTimeout(() => {
+        if (FocusReplyMainComment.current[commentIndex]) {
+          FocusReplyMainComment.current[commentIndex].focus(); // Focus on the main comment input
+        }
+      }, 0); // Use a small timeout to allow the component to mount
+    } else if (rpMainOrclild === "child") {
+      // Handle child reply if needed
+    }
+  };
+
+  const handleclearFocus = (typeofComment) => {
+    if (typeofComment === "mainreply") {
+      setActiveReply(null);
+      setReplyText("");
+    } else if (typeofComment === "addcomment") {
+      setIsFocused(false);
+      setCommentText("");
+    }
   };
 
   const commentCount = listComments.length;
@@ -58,6 +83,8 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
     if (!commentText.trim()) {
       return;
     }
+
+    if (addCommentloading) return;
 
     setAddCommentLoading(true);
     setIsFocused(false);
@@ -127,8 +154,8 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
     }
 
     if (!replyText.trim()) return alert("Reply cannot be empty!");
-
-    setLoading(true);
+    if (replyMainCommentloading) return;
+    setReplyMainCommentLoading(true);
     try {
       const response = await axios.post(
         `https://api-school-amber.vercel.app/api/news/${newsId}/comments/${parentId}/reply`,
@@ -147,14 +174,13 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
               : comment
           )
         );
+        setReplyMainCommentLoading(false);
         setActiveReply(null); // Close reply input
         setReplyText("");
       }
     } catch (error) {
       console.error(error);
       alert("Failed to post reply.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -389,7 +415,7 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
             <div className="flex items-center justify-end space-x-2.5 mt-2.5">
               <button
                 className="rounded-full transition-all duration-100 ease-in-out hover:bg-[#e5e5e5] px-5 py-2 outline-none focus:outline-none"
-                onClick={handleclearFocus}
+                onClick={() => handleclearFocus("addcomment")}
               >
                 បោះបង់
               </button>
@@ -496,9 +522,7 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
                     <button
                       className="flex items-center space-x-1 transition duration-300 ease-in-out hover:text-gray-600"
                       onClick={() =>
-                        setActiveReply((prev) =>
-                          prev === comment._id ? null : comment._id
-                        )
+                        handleClickReply("main", comment._id, index)
                       }
                     >
                       <FaReply /> <span>Reply</span>
@@ -506,24 +530,77 @@ const CommentSection = ({ openAuthModal, newsId, ListComments }) => {
                   </div>
 
                   {/* reply main comment */}
-                  {activeReply === comment._id && (
-                    <div className="mt-2">
-                      <textarea
-                        className="w-full p-2 border rounded-md"
-                        rows="2"
-                        placeholder="Reply..."
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                      />
-                      <button
-                        className="mt-2 px-4 py-2 bg-green-500 text-white rounded-md transition duration-300 hover:bg-green-600"
-                        onClick={() => handleReply(comment._id, replyText)}
-                        disabled={loading}
-                      >
-                        {loading ? "Posting..." : "Submit"}
-                      </button>
-                    </div>
-                  )}
+                  {activeReply === comment._id &&
+                    (replyMainCommentloading ? (
+                      <div className="flex items-center justify-center pb-4 pt-4">
+                        <div className="dot-spinner">
+                          <div className="dot-spinner__dot"></div>
+                          <div className="dot-spinner__dot"></div>
+                          <div className="dot-spinner__dot"></div>
+                          <div className="dot-spinner__dot"></div>
+                          <div className="dot-spinner__dot"></div>
+                          <div className="dot-spinner__dot"></div>
+                          <div className="dot-spinner__dot"></div>
+                          <div className="dot-spinner__dot"></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-5">
+                        <div className="flex items-center w-full">
+                          <div className="">
+                            <p
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+                              style={{
+                                backgroundColor: generateColorFromName(
+                                  user?.username
+                                ),
+                              }}
+                            >
+                              {getInitials(user?.username)}{" "}
+                              {/* Display only one character */}
+                            </p>
+                          </div>
+
+                          <div className="w-full pl-3">
+                            <input
+                              // ref={FocusReplyMainComment}
+                              ref={(el) =>
+                                (FocusReplyMainComment.current[index] = el)
+                              }
+                              type="text"
+                              className="w-full h-10 text-gray-600 outline-none focus:outline-none"
+                              placeholder="បញ្ចូលមតិ..."
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                            />
+                            <div className="border-t border-gray-200 w-full"></div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end space-x-2.5 mt-2.5">
+                          <button
+                            className="rounded-full transition-all duration-100 ease-in-out hover:bg-[#e5e5e5] px-5 py-2 outline-none focus:outline-none"
+                            // onClick={handleclearFocus}
+                            onClick={() => handleclearFocus("mainreply")}
+                          >
+                            បោះបង់
+                          </button>
+
+                          <button
+                            className={`rounded-full bg-[#F2F2F2] px-5 py-2 outline-none focus:outline-none  ${
+                              replyText !== ""
+                                ? " bg-blue-600 text-white"
+                                : "bg-[#F2F2F2] text-gray-400"
+                            }`}
+                            // onClick={handleAddComment}
+                            disabled={replyText !== "" ? false : true}
+                            onClick={() => handleReply(comment._id, replyText)}
+                          >
+                            ផ្ដល់​មតិ
+                          </button>
+                        </div>
+                      </div>
+                    ))}
 
                   {/* child comment  */}
                   {comment?.replies && comment?.replies.length > 0 ? (
